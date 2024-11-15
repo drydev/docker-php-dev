@@ -1,0 +1,63 @@
+name: php-dev
+services:
+  nginx:
+    build:
+      context: ./.docker/nginx
+      dockerfile: Dockerfile
+    ports:
+      - "8888:80"
+    volumes:
+      - ./projects:/var/www/projects
+      - ./.docker/nginx/conf.d:/etc/nginx/conf.d
+    depends_on:
+      - php
+    networks:
+      - app-network
+
+  php:
+    build:
+      context: ./.docker/php
+      dockerfile: Dockerfile
+    volumes:
+      - ./projects:/var/www/projects
+      - ./.docker/php/conf.d:/usr/local/etc/php/conf.d
+    networks:
+      - app-network
+
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./.docker/mysql/init:/docker-entrypoint-initdb.d
+      - ./.docker/mysql/my.cnf:/etc/mysql/conf.d/my.cnf
+    ports:
+      - "6033:3306"
+    networks:
+      - app-network
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "9736:6379"
+    networks:
+      - app-network
+
+  node:
+    image: node:18-alpine
+    volumes:
+      - ./projects:/var/www/projects
+    working_dir: /var/www/projects
+    entrypoint: ["/bin/sh", "/var/www/projects/node-entrypoint.sh"]
+    environment:
+      - CURRENT_PROJECT=project1
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  mysql-data: 
